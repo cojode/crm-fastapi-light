@@ -1,0 +1,18 @@
+{% extends "error_base.html" %}
+
+{% block title %}404 - Страница не найдена{% endblock %}
+
+{% block error_content %}
+    <div class="error-icon text-info">
+        <i class="bi bi-binoculars-fill"></i>
+    </div>
+    <div class="error-code text-info">404</div>
+    <div class="error-message">
+        Страница, которую вы ищете, не существует.
+    </div>
+    {% if detail %}
+    <div class="alert alert-info">
+        {{ detail }}
+    </div>
+    {% endif %}
+{% endblock %}

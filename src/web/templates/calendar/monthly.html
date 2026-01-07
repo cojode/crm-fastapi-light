@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Календарь{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Календарь событий</h2>
+            <small class="text-muted">{{ view.month_name }} {{ view.year }}</small>
+        </div>
+        <div class="btn-group">
+            <a href="/" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-calendar-event"></i> К текущим
+            </a>
+            <a href="?month={{ prev_month | datetimeformat('%Y-%m') }}" class="btn btn-outline-primary">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <a href="?month={{ next_month | datetimeformat('%Y-%m') }}" class="btn btn-outline-primary">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        {% for day in view.weekdays %}
+                        <th class="text-center py-2" style="width: 14.28%">{{ day }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in view.slots %}
+                    <tr>
+                        {% for day in week %}
+                        <td class="p-0 calendar-day {% if not day.is_current_month %}bg-light text-muted{% endif %}">
+                            {% if day.day %}
+                            <a href="?month={{ view.year }}-{{ '%02d' % view.month }}&day={{ '%02d' % day.day }}" class="d-block text-decoration-none text-body p-2 h-100 w-100">
+                            {% else %}
+                            <div class="p-2">
+                            {% endif %}
+                            <div class="p-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-bold {% if day.is_weekend %}text-danger{% else %}text-primary{% endif %}">{{ day.day if day.day else '' }}</span>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    {% set max_events = 2 %}
+                                    {% set total_events = day.events | length %}
+                                    {% for event in day.events[:max_events] %}
+                                    <div class="event-item mb-2 p-2 rounded {% if event.cancelled %}cancelled-event{% else %}{% if event.is_meeting %}meeting-event{% else %}task-event{% endif %}{% endif %}"
+                                         data-bs-toggle="tooltip" 
+                                         data-bs-placement="top" 
+                                         title="{{ event.event.title }}">
+                                        <div class="d-flex align-items-center">
+                                               <div class="flex-grow-1 text-truncate">
+                                                <small class="d-block fw-semibold text-truncate">
+                                                    {% if event.is_meeting %}
+                                                    <i class="bi bi-people-fill me-1"></i>
+                                                    {% elif event.is_task and event.event.is_author(current_user.id) %}
+                                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                                    {% elif event.is_task and event.event.is_assignee(current_user.id) %}
+                                                    <i class="bi bi-check"></i>
+                                                    { % else % }
+                                                    <i class="bi bi-patch-question"></i>
+                                                    {% endif %}
+                                                    {{ event.event.title }}
+                                                </small>
+                                                <small class="text-muted">
+                                                    {{ event.start | datetimeformat('%H:%M') }}
+                                                    {% if event.is_interval %} - {{ event.end | datetimeformat('%H:%M') }}{% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if total_events > max_events %}
+                                    <div class="more-events">
+                                        ...ещё {{ total_events - max_events }} событие{% if total_events - max_events > 1 %}й{% endif %}
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<style>
+.calendar-day {
+    height: 160px;
+    vertical-align: top;
+    overflow: hidden;
+    position: relative;
+}
+
+.event-container {
+    max-height: 120px;
+    overflow: hidden;
+}
+
+.event-item {
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.more-events {
+    position: absolute;
+    bottom: 4px;
+    left: 8px;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

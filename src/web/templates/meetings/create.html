@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Создать встречу{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2>Создать встречу</h2>
+        <form method="POST" action="/teams/{{ team.id }}/meetings/create">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            
+            <div class="mb-3">
+                <label for="title" class="form-label">Название встречи</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="start_time" class="form-label">Дата и время начала</label>
+                <input type="datetime-local" class="form-control" id="start_time" name="start_time" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="duration" class="form-label">Продолжительность (минуты)</label>
+                <input type="number" class="form-control" id="duration" name="duration" min="15" value="60" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="participants" class="form-label">Участники</label>
+                <select class="form-select" id="participants" name="participants" multiple>
+                    {% for member in team.members %}
+                        <option value="{{ member.user_id }}" 
+                            {% if member.user_id == current_user.id %}selected{% endif %}>
+                            {{ member.user.first_name }} {{ member.user.last_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Удерживайте Ctrl для выбора нескольких участников</small>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Создать встречу</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

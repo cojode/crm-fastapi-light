@@ -1,0 +1,45 @@
+
+{% extends "base.html" %}
+
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <h2>Профиль</h2>
+        <form method="POST" action="/profile">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            
+            <div class="mb-3">
+                <label for="name" class="form-label">Имя</label>
+                <input type="text" class="form-control" id="first_name" name="first_name" value="{{ current_user.first_name }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Фамилия</label>
+                <input type="text" class="form-control" id="last_name" name="last_name" value="{{ current_user.last_name }}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Почта</label>
+                <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" readonly>
+            </div>
+
+
+            <div class="mb-3">
+                <p>Ваша роль: {{ current_user.role.value }} </p>
+            </div>
+            <div class="mb-3">
+                <p>Ваш UUID: {{ current_user.id }} </p>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+        <br>
+        <form method="POST" action="/profile/delete" style="display:inline;" onsubmit="return confirm('Вы уверены, что хотите удалить профиль?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-danger">Удалить профиль</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

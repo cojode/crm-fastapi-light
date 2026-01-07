@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Создать задачу{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2>Создать задачу</h2>
+        <form method="POST" action="/teams/{{ team.id }}/tasks/create">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            
+            <div class="mb-3">
+                <label for="title" class="form-label">Название</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">Описание</label>
+                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label for="deadline" class="form-label">Дедлайн</label>
+                <input type="datetime-local" class="form-control" id="deadline" name="deadline" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="assignee_id" class="form-label">Исполнитель</label>
+                <select class="form-select" id="assignee_id" name="assignee_id">
+                    <option value="">Не назначено</option>
+                    {% for member in team.members %}
+                        <option value="{{ member.user_id }}">{{ member.user.first_name }} {{ member.user.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Создать</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

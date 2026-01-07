@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                {% if edit_mode %}
+                <form method="POST" action="/tasks/{{ task.id }}/update">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Название:</strong></label>
+                        <input type="text" class="form-control" name="title" value="{{ task.title }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Описание:</strong></label>
+                        <textarea class="form-control" name="description" rows="3" required>{{ task.description }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Дедлайн:</strong></label>
+                        <input type="datetime-local" class="form-control" name="deadline" 
+                               value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Исполнитель:</strong></label>
+                        <select class="form-select" name="assignee_id">
+                            <option value="">Не назначено</option>
+                            {% for member in team.members %}
+                                <option value="{{ member.user_id }}" 
+                                    {% if task.assignee_id == member.user_id %}selected{% endif %}>
+                                    {{ member.user.first_name }} {{ member.user.last_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary me-2">Сохранить</button>
+                    <a href="/tasks/{{ task.id }}" class="btn btn-outline-secondary">Отмена</a>
+                </form>
+                {% elif rate_mode %}
+                <form method="POST" action="/tasks/{{ task.id }}/rate">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    
+                    <h2 class="card-title">{{ task.title }}</h2>
+                    <p><strong>Статус:</strong> {{ task.status.value }}</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Оценка выполнения (1-5):</strong></label>
+                        <div class="btn-group" role="group">
+                            {% for i in range(1, 6) %}
+                                <input type="radio" class="btn-check" name="score" id="score{{ i }}" value="{{ i }}" 
+                                    {% if task.score and task.score.value == i %}checked{% endif %} autocomplete="off">
+                                <label class="btn btn-outline-primary" for="score{{ i }}">{{ i }}</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary me-2">Сохранить оценку</button>
+                    <a href="/tasks/{{ task.id }}" class="btn btn-outline-secondary">Отмена</a>
+                </form>
+                {% else %}
+                <h2 class="card-title">{{ task.title }}</h2>
+                <div class="mb-3">
+                    <span class="badge bg-secondary">
+                        <i class="bi bi-people"></i> {{ task.team.name }}
+                    </span>
+                </div>
+                <p><strong>Автор:</strong> {{ task.author.first_name }} {{ task.author.last_name }}</p>
+                <p><strong>Статус:</strong> {{ task.status.value }}</p>
+                <p><strong>Создана:</strong> {{ task.created_at | datetimeformat("%d.%m.%Y %H:%M") }}</p>
+                <p><strong>Дедлайн:</strong> {{ task.deadline | datetimeformat("%d.%m.%Y %H:%M") }}
+                    {% if task.is_expired %}<span class="badge bg-danger">Просрочено</span>{% endif %}
+                </p>
+                <p><strong>Описание:</strong> {{ task.description }}</p>
+                <p><strong>Исполнитель:</strong> 
+                    {% if task.assignee %}
+                        {{ task.assignee.first_name }} {{ task.assignee.last_name }}
+                    {% else %}
+                        Не назначено
+                    {% endif %}
+                </p>
+                {% if task.score %}
+                    <p><strong>Оценка:</strong> 
+                        {% for i in range(1, 6) %}
+                            {% if i <= task.score.value %}
+                                <i class="bi bi-star-fill text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-star text-warning"></i>
+                            {% endif %}
+                        {% endfor %}
+                        ({{ task.score.value }}/5)
+                    </p>
+                {% endif %}
+
+                <div class="mt-3">
+                    {% if task.is_author(invoker_member.user_id) or invoker_member.has_permission("can_override_task") %}
+                        <a href="/tasks/{{ task.id }}?edit=true" class="btn btn-outline-secondary me-2">Изменить</a>
+                        <form method="POST" action="/tasks/{{ task.id }}/delete" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить задачу?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-outline-danger me-2">Удалить</button>
+                        </form>
+                        {% if task.is_completed %}
+                            <a href="/tasks/{{ task.id }}?rate=true" class="btn btn-outline-success me-2">Оценить выполнение</a>
+                        {% endif %}
+                    {% endif %}
+                    {% if task.is_completable and (task.is_assignee(invoker_member.user_id) or invoker_member.has_permission("can_override_task")) %}
+                        <form method="POST" action="/tasks/{{ task.id }}/complete" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-outline-primary">Выполнить задачу</button>
+                        </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Комментарии</h4>
+            </div>
+            <div class="card-body">
+                {% for comment in task.comments %}
+                    <div class="card mb-2">
+                        <div class="card-body">
+                            <small class="text-muted">[{{ comment.created_at | datetimeformat("%d.%m.%Y %H:%M") }}]</small>
+                            <strong>{{ comment.author.first_name }} {{ comment.author.last_name }}</strong>: 
+                            {{ comment.text }}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Комментариев пока нет.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if not edit_mode and not rate_mode %}
+        <form method="POST" action="/tasks/{{ task.id }}/comment">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3">
+                <textarea class="form-control" name="comment_text" placeholder="Добавить комментарий..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Отправить</button>
+        </form>
+        {% endif %}
+
+        {% if not edit_mode and not rate_mode %}
+            {% if task.assignee_id == invoker_member.user_id %}
+                <a href="/tasks?task_type=assigned" class="btn btn-link mt-3">Назад</a>
+            {% else %}
+                <a href="/tasks?task_type=authored" class="btn btn-link mt-3">Назад</a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Мои встречи{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10">
+        <h2 class="mb-4">Предстоящие встречи</h2>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <form method="GET" action="{{ request.url.path }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Диапазон дат</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" name="start_date" 
+                                       value="{{ request.query_params.get('start_date', '') }}">
+                                <span class="input-group-text">по</span>
+                                <input type="date" class="form-control" name="end_date" 
+                                       value="{{ request.query_params.get('end_date', '') }}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Статус встречи</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="status" value="" 
+                                           id="status-all"
+                                           {{ "checked" if not request.query_params.get('status') }}>
+                                    <label class="form-check-label" for="status-all">
+                                        Все статусы
+                                    </label>
+                                </div>
+                                {% for status, value in {'awaited': ("Ожидается", "primary"), 'live': ("Прямо сейчас", "warning"), 'ended': ("Завершена", "success"), 'cancelled': ("Отменена", "secondary")}.items() %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" 
+                                           name="status" value="{{ status }}" 
+                                           id="status-{{ status }}"
+                                           {{ "checked" if request.query_params.get('status') == status }}>
+                                    <label class="form-check-label" for="status-{{ status }}">
+                                        <span class="badge bg-{{ value[1] }}">{{ value[0] }}</span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-funnel"></i> Применить фильтры
+                            </button>
+                            <a href="{{ request.url.path }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Сбросить
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if meetings %}
+            {% for meeting in meetings %}
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">{{ meeting.title }}</h5>
+                                <small class="text-muted">#{{ meeting.id|string|truncate(8, True, '') }}</small>
+                            </div>
+                            <span class="badge 
+                                {% if meeting.cancelled %}bg-secondary
+                                {% elif meeting.is_live %}bg-warning
+                                {% elif meeting.is_awaited %}bg-primary
+                                {% elif meeting.is_ended %}bg-success{% endif %}">
+                                {% if meeting.cancelled %}Отменена
+                                {% elif meeting.is_live %}Прямо сейчас
+                                {% elif meeting.is_awaited %}Ожидается
+                                {% elif meeting.is_ended %}Завершена{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="mt-2 mb-2">
+                            <p class="badge bg-secondary">
+                                <i class="bi bi-people"></i> {{ meeting.team.name }}
+                            </p>
+                            <p class="card-text">
+                                <i class="bi bi-calendar-event"></i> 
+                                <strong>Начало:</strong> {{ meeting.start_time|datetimeformat("%d.%m.%Y %H:%M") }}
+                            </p>
+                            <p class="card-text">
+                                <i class="bi bi-clock"></i> 
+                                <strong>Окончание:</strong> {{ meeting.end_time|datetimeformat("%d.%m.%Y %H:%M") }}
+                                ({{ (meeting.duration.total_seconds() / 60)|int }} мин.)
+                            </p>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <div class="text-muted">
+                                <i class="bi bi-person"></i>
+                                <strong>Организатор:</strong>
+                                {% if meeting.organizer_id == current_user.id %}
+                                    <span class="text-primary">Вы</span>
+                                {% else %}
+                                    {{ meeting.organizer.first_name }} {{ meeting.organizer.last_name }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-muted">
+                            <i class="bi bi-people"></i>
+                            <strong>Участников:</strong> {{ meeting.participants|length }}
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <a href="/meetings/{{ meeting.id }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye"></i> Подробнее
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info" role="alert">
+                У вас нет запланированных встреч.
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

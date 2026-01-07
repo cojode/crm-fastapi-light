@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Дневной календарь - {{ view.date | datetimeformat('%d.%m.%Y') }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">{{ view.day_name }}, {{ view.date | datetimeformat('%d %B %Y') }}</h2>
+            {% if view.is_today %}
+            <span class="badge bg-primary">Сегодня</span>
+            {% endif %}
+        </div>
+        <div class="btn-group">
+            <a href="/{{ prev_day | datetimeformat('?month=%Y-%m&day=%d') }}" 
+               class="btn btn-outline-primary">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <a href="/" class="btn btn-outline-secondary mx-2">
+                <i class="bi bi-calendar-event"></i> Текущий день
+            </a>
+            <a href="/{{ next_day | datetimeformat('?month=%Y-%m&day=%d') }}" 
+               class="btn btn-outline-primary">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for slot in view.slots %}
+                <div class="list-group-item {% if slot.is_now %}bg-light{% endif %}">
+                    <div class="d-flex align-items-start">
+                        <div class="hour-label text-center me-3" style="width: 60px;">
+                            <strong>{{ "%02d:00" % slot.hour }}</strong>
+                        </div>
+                        <div class="flex-grow-1">
+                            {% if slot.events %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for event in slot.events %}
+                                <a href="/{{ event.type.value }}s/{{ event.event.id }}" class="text-decoration-none text-dark">
+                                <div class="event-card p-3 rounded {% if event.cancelled %}cancelled-event{% else %}{% if event.is_meeting %}meeting-event{% else %}task-event{% endif %}{% endif %}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-1">
+                                                {% if event.is_meeting %}
+                                                <i class="bi bi-people-fill me-2"></i>
+                                                {% else %}
+                                                <i class="bi bi-check-circle-fill me-2"></i>
+                                                {% endif %}
+                                                {{ event.event.title }}
+                                            </h5>
+                                            <div class="d-flex align-items-center text-muted mb-2">
+                                                <i class="bi bi-clock me-1"></i>
+                                                <small>
+                                                    {{ event.start | datetimeformat('%H:%M') }}
+                                                    {% if event.is_interval %} - {{ event.end | datetimeformat('%H:%M') }}{% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-secondary">{{ event.event.team.name }}</span>
+                                    </div>
+                                    
+                                    {% if event.is_meeting %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person-fill"></i> Организатор: {{ event.event.organizer.first_name }} {{ event.event.organizer.last_name }}
+                                        </small>
+                                    </div>
+                                    {% else %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person-fill"></i> Автор: {{ event.event.author.first_name }} {{ event.event.author.last_name }}
+                                        </small>
+                                        {% if event.event.assignee %}
+                                        <small class="text-muted ms-2">
+                                            <i class="bi bi-person-check-fill"></i> Исполнитель: {{ event.event.assignee.first_name }} {{ event.event.assignee.last_name }}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if event.cancelled %}
+                                    <div class="mt-2">
+                                        <span class="badge bg-danger">Отменено</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-muted py-2">Нет событий</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .event-card {
+        transition: all 0.2s;
+        border-left: 4px solid;
+    }
+    .event-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .meeting-event {
+        background-color: #e3f2fd;
+        border-left-color: #2196F3;
+    }
+    .task-event {
+        background-color: #e8f5e9;
+        border-left-color: #4CAF50;
+    }
+    .cancelled-event {
+        background-color: #ffebee;
+        border-left-color: #f44336;
+        text-decoration: line-through;
+    }
+    .hour-label {
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}

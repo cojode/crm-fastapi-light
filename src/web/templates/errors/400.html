@@ -1,0 +1,18 @@
+{% extends "error_base.html" %}
+
+{% block title %}400 - Неверный запрос{% endblock %}
+
+{% block error_content %}
+    <div class="error-icon text-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <div class="error-code text-danger">400</div>
+    <div class="error-message">
+        Неверный запрос. Пожалуйста, проверьте введённые данные.
+    </div>
+    {% if detail %}
+    <div class="alert alert-warning">
+        {{ detail }}
+    </div>
+    {% endif %}
+{% endblock %}

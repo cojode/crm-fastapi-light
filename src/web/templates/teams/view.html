@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}{{ team.name }} - Просмотр команды{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        {% if invoker_member.has_permission("rename_team") %}
+        <div class="me-3">
+            <form id="renameForm" method="POST" action="/teams/{{ team.id }}/rename" class="d-flex align-items-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-lg border-0 bg-transparent p-0 fs-2 fw-bold" 
+                            name="new_name" value="{{ team.name }}" id="teamNameInput" 
+                            style="box-shadow: none; max-width: 400px;">
+                    <button type="button" class="btn btn-link text-decoration-none" id="editTeamNameBtn">
+                        <i class="bi bi-pencil-square fs-4"></i>
+                    </button>
+                    <button type="submit" class="btn btn-link text-decoration-none d-none" id="saveTeamNameBtn">
+                        <i class="bi bi-check-lg fs-4 text-success"></i>
+                    </button>
+                    <button type="button" class="btn btn-link text-decoration-none d-none" id="cancelTeamNameBtn">
+                        <i class="bi bi-x-lg fs-4 text-danger"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <h2>{{ team.name }}</h2>
+        {% endif %}
+        <div>
+            {% if invoker_member.has_permission("create_task") %}
+            <a href="/teams/{{ team.id }}/tasks/create" class="btn btn-success ms-2">
+                <i class="bi bi-plus-circle"></i> Создать задачу
+            </a>
+            {% endif %}
+            {% if invoker_member.has_permission("create_meeting") %}
+            <a href="/teams/{{ team.id }}/meetings/create" class="btn btn-info ms-2">
+                <i class="bi bi-plus-circle"></i> Создать встречу
+            </a>
+            {% endif %}
+            <a href="/teams" class="btn btn-outline-secondary ms-2">
+                <i class="bi bi-arrow-left"></i> Назад
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Информация о команде</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Дата создания:</strong> 
+                            {{ team.created_at | datetimeformat("%d.%m.%Y %H:%M") }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Участников:</strong> {{ team.members | length }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Участники команды</h5>
+            <span class="badge bg-primary rounded-pill">{{ team.members | length }}</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Имя</th>
+                            <th>Фамилия</th>
+                            <th>Email</th>
+                            <th>Роль</th>
+                            <th>Дата вступления</th>
+                            {% if invoker_member.has_permission("change_role") %}
+                            <th>Изменить роль</th>
+                            {% endif %}
+                            {% if invoker_member.has_permission("remove_member") %}
+                            <th>Действия</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in team.members %}
+                        <tr>
+                            <td>{{ member.user.first_name }}</td>
+                            <td>{{ member.user.last_name }}</td>
+                            <td>{{ member.user.email }}</td>
+                            <td>
+                                {% if member.is_team_owner %}
+                                    <span class="badge bg-success">Создатель</span>
+                                {% elif member.is_team_admin %}
+                                    <span class="badge bg-danger">Админ</span>
+                                {% elif member.is_team_manager %}
+                                    <span class="badge bg-warning text-dark">Менеджер</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Участник</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ member.joined_at | datetimeformat("%d.%m.%Y") }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    {% if invoker_member.has_permission("change_role") and not member.is_team_owner %}
+                                    <form method="POST" action="/teams/{{ team.id }}/members/{{ member.user_id }}/role" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <div class="input-group">
+                                            <select name="new_role" class="form-select form-select-sm" 
+                                                    onchange="this.form.submit()" style="width: 120px;">
+                                                <option value="employee" {% if not member.is_team_admin and not member.is_team_manager %}selected{% endif %}>
+                                                    Участник
+                                                </option>
+                                                <option value="manager" {% if member.is_team_manager %}selected{% endif %}>
+                                                    Менеджер
+                                                </option>
+                                                <option value="admin" {% if member.is_team_admin %}selected{% endif %}>
+                                                    Админ
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if invoker_member.has_permission("remove_member") and not member.is_team_owner %}
+                                    <form method="POST" action="/teams/{{ team.id }}/members/{{ member.user_id }}/remove" class="ms-2 d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('Вы уверены?')">
+                                            <i class="bi bi-person-x">Удалить</i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% if invoker_member.has_permission("inspect_invite_codes") %}
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Инвайт-коды</h5>
+            {% if invoker_member.has_permission("generate_invite_code") %}
+            <form method="POST" action="/teams/{{ team.id }}/invite" class="mb-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-sm btn-success">
+                    <i class="bi bi-plus-lg"></i> Создать код
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Создатель</th>
+                            <th>Срок действия</th>
+                            <th>Использования</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invite in team.invites %}
+                        <tr class="{% if invite.is_expired %}table-secondary{% endif %}">
+                            <td>
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-sm" 
+                                           value="{{ invite.code }}" id="invite-{{ invite.code }}" readonly>
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="copyToClipboard('invite-{{ invite.code }}')">
+                                        <i class="bi bi-clipboard">Копировать</i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                {% if invite.creator_id == current_user.id %}
+                                    Вы
+                                {% else %}
+                                    {{ invite.creator.first_name }} {{ invite.creator.last_name}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ invite.expires_at | datetimeformat("%d.%m.%Y %H:%M") }}
+                                {% if invite.is_expired %}
+                                    <span class="badge bg-danger ms-1">Истёк</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ invite.used_count }} / 
+                                {% if invite.max_uses == 0 %}∞{% else %}{{ invite.max_uses }}{% endif %}
+                            </td>
+                            <td>
+                                {% if invite.is_expired %}
+                                    <span class="badge bg-secondary">Неактивен</span>
+                                {% elif invite.max_uses > 0 and invite.used_count >= invite.max_uses %}
+                                    <span class="badge bg-warning text-dark">Исчерпан</span>
+                                {% else %}
+                                    <span class="badge bg-success">Активен</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not invite.is_expired and invoker_member.has_permission("remove_invite_code") %}
+                                <form method="POST" action="/teams/{{ team.id }}/invites/{{ invite.code }}/revoke" 
+                                      class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Отозвать этот инвайт-код?')">
+                                        <i class="bi bi-x-circle"></i> Отозвать
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Нет активных инвайт-кодов</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if invoker_member.has_permission("add_member") %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Добавить участника</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/teams/{{ team.id }}/members/add">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div class="row g-3">
+                    <div class="col-md">
+                        <input type="text" class="form-control" id="new_member_id" name="new_member_id" 
+                               placeholder="Введите UUID пользователя" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Добавить
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+<script>
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    
+    const originalText = copyText.value;
+    copyText.value = "Скопировано!";
+    setTimeout(() => {
+        copyText.value = originalText;
+    }, 2000);
+}
+</script>
+{% endblock %}

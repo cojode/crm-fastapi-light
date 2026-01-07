@@ -1,0 +1,18 @@
+{% extends "error_base.html" %}
+
+{% block title %}405 - Метод не разрешён{% endblock %}
+
+{% block error_content %}
+    <div class="error-icon text-secondary">
+        <i class="bi bi-slash-circle-fill"></i>
+    </div>
+    <div class="error-code text-secondary">405</div>
+    <div class="error-message">
+        Этот метод HTTP не разрешён для запрашиваемого ресурса.
+    </div>
+    {% if detail %}
+    <div class="alert alert-secondary">
+        {{ detail }}
+    </div>
+    {% endif %}
+{% endblock %}

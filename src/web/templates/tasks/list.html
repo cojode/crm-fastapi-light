@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Мои задачи{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10">
+        <h2 class="mb-4">
+            {% if task_type == 'assigned' %}Задачи, назначенные на меня
+            {% else %}Задачи, созданные мной{% endif %}
+        </h2>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <form method="GET" action="{{ request.url.path }}">
+                    <input type="hidden" name="task_type" value="{{ task_type }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Диапазон дат создания</label>
+                            <div class="input-group">
+                                <input type="date" class="form-control" name="start_date" 
+                                       value="{{ request.query_params.get('start_date', '') }}">
+                                <span class="input-group-text">по</span>
+                                <input type="date" class="form-control" name="end_date" 
+                                       value="{{ request.query_params.get('end_date', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Статусы задач</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for status in ['open', 'in_progress', 'completed'] %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="status" value="{{ status }}" 
+                                               id="status-{{ status }}"
+                                               {{ "checked" if status in request.query_params.getlist('status')}}>
+                                        <label class="form-check-label" for="status-{{ status }}">
+                                            {{ status|replace('_', ' ')|title }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-funnel"></i> Применить фильтры
+                            </button>
+                            <a href="{{ request.url.path }}?task_type={{ task_type }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Сбросить
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded bg-light">
+                            <h4 class="text-primary">{{ total_tasks }}</h4>
+                            <p class="mb-0 text-muted">Всего задач</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded bg-light">
+                            <h4 class="text-success">{{ rated_tasks }}</h4>
+                            <p class="mb-0 text-muted">Оценено задач</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 border rounded bg-light">
+                            <h4 class="text-warning">
+                                {% if avg_rating %}{{ "%.1f"|format(avg_rating) }}{% else %}—{% endif %}
+                            </h4>
+                            <p class="mb-0 text-muted">Средняя оценка</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if tasks %}
+            {% for task in tasks %}
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">{{ task.title }}</h5>
+                                <small class="text-muted">#{{ task.id|string|truncate(8, True, '') }}</small>
+                            </div>
+                            <span class="badge 
+                                {% if task.status.value == 'completed' %}bg-success
+                                {% elif task.status.value == 'in_progress' %}bg-info
+                                {% elif task.is_expired %}bg-danger
+                                {% else %}bg-secondary{% endif %}">
+                                {{ task.status.value|replace('_', ' ')|title }}
+                            </span>
+                        </div>
+
+                        <div class="mt-2 mb-2">
+                            <p class="badge bg-secondary">
+                                <i class="bi bi-people"></i> {{ task.team.name }}
+                            </p>
+                            {% if task.description %}
+                                <p class="card-text text-muted mb-1">
+                                    {{ task.description|truncate(100) }}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <div class="text-muted">
+                                <i class="bi bi-person"></i>
+                                    {{ task.author.first_name }} {{ task.author.last_name }}
+                            </div>
+                            <div class="text-muted">
+                                <i class="bi bi-calendar-event"></i>
+                                {{ task.created_at|datetimeformat("%d.%m.%Y") }}
+                            </div>
+                            <div class="text-muted">
+                                <i class="bi bi-clock"></i>
+                                {{ task.deadline|datetimeformat("%d.%m.%Y %H:%M") }}
+                                {% if task.is_expired %}
+                                    <span class="badge bg-danger ms-1">Просрочено</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if task.score %}
+                        <div class="mb-2">
+                            <strong>Оценка:</strong>
+                            {% for i in range(1, 6) %}
+                                {% if i <= task.score.value %}
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-star text-warning"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="/tasks/{{ task.id }}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye"></i> Подробнее
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                        {% if task_type == 'assigned' %}
+                        <div class="text-muted">
+                            <i class="bi bi-person"></i> Автор: 
+                            {{ task.author.first_name }} {{ task.author.last_name }}
+                        </div>
+                        {% else %}
+                        <div class="text-muted">
+                            <i class="bi bi-person"></i> Исполнитель: 
+                            {% if task.assignee %}
+                                {{ task.assignee.first_name }} {{ task.assignee.last_name }}
+                            {% else %}
+                                Не назначен
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info" role="alert">
+                {% if task_type == 'assigned' %}
+                    У вас нет назначенных задач.
+                {% else %}
+                    Вы еще не создали ни одной задачи.
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
